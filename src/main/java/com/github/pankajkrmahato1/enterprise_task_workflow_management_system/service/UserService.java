@@ -5,15 +5,19 @@ import com.github.pankajkrmahato1.enterprise_task_workflow_management_system.DTO
 import com.github.pankajkrmahato1.enterprise_task_workflow_management_system.entity.Role;
 import com.github.pankajkrmahato1.enterprise_task_workflow_management_system.entity.User;
 import com.github.pankajkrmahato1.enterprise_task_workflow_management_system.exception.ResourceAlreadyExistsException;
+import com.github.pankajkrmahato1.enterprise_task_workflow_management_system.exception.ResourceNotFoundException;
 import com.github.pankajkrmahato1.enterprise_task_workflow_management_system.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
+
     public UserResponseDTO createUser(UserRequestDTO userRequestDTO) {
 
         if(userRepository.existsByEmail(userRequestDTO.email())){
@@ -29,12 +33,46 @@ public class UserService {
 
         User saved = userRepository.save(user);
 
+        return mapToResponse(saved);
+    }
+    public List<UserResponseDTO> getAllUsers() {
+        return userRepository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    public UserResponseDTO updateUser(Long id, UserRequestDTO reqeust) {
+        User user = userRepository.findById(id)
+                .orElseThrow(
+                        ()->new ResourceNotFoundException ("user not found")
+                );
+        user.setUsername(reqeust.username());
+        user.setEmail(reqeust.email());
+        user.setPassword(reqeust.password());
+        User updated = userRepository.save(user);
+
+        return mapToResponse(updated);
+    }
+
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(()->new ResourceNotFoundException ("user not found"));
+        userRepository.delete(user);
+    }
+
+    public UserResponseDTO mapToResponse(User user) {
         return new UserResponseDTO(
-                saved.getId(),
-                saved.getEmail(),
-                saved.getUsername(),
-                saved.getRole().name()
+                user.getId(),
+                user.getEmail(),
+                user.getUsername(),
+                user.getRole().name()
         );
-                
+    }
+
+    public UserResponseDTO getUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(()->new ResourceNotFoundException("user not found"));
+        return mapToResponse(user);
     }
 }
